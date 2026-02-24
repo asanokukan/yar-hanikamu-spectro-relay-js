@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Spectro Relay Monitor</title>
+  <style>
+    body { font-family: monospace; background:#111; color:#0f0; padding:20px; }
+    .card { border:1px solid #0f0; padding:15px; margin-bottom:15px; }
+    .red { color:#f33; }
+    .green { color:#0f0; }
+  </style>
+</head>
+<body>
+
+<h1>Spectro Relay Monitor</h1>
+
+<div class="card">
+  <div>Connection Status: <span id="conn">Connecting...</span></div>
+  <div>Last Sample Timestamp: <span id="ts">—</span></div>
+  <div>Data Age (ms): <span id="age">—</span></div>
+</div>
+
+<div class="card">
+  <div>Active SSE Clients: <span id="clients">—</span></div>
+  <div>Relay Health: <span id="health">Checking...</span></div>
+</div>
+
+<script>
+let lastTimestamp = null;
+let connected = false;
+
+const connEl = document.getElementById("conn");
+const tsEl = document.getElementById("ts");
+const ageEl = document.getElementById("age");
+const clientsEl = document.getElementById("clients");
+const healthEl = document.getElementById("health");
+
+// Connect to SSE
+const es = new EventSource("/stream");
+
+es.onopen = () => {
+  connected = true;
+  connEl.textContent = "Connected";
+  connEl.className = "green";
+};
+
+es.onerror = () => {
+  connected = false;
+  connEl.textContent = "Disconnected";
+  connEl.className = "red";
+};
+
+es.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  lastTimestamp = data._timestamp || null;
+  tsEl.textContent = lastTimestamp;
+};
+
+// Update data age every 500ms
+setInterval(() => {
+  if (lastTimestamp) {
+    ageEl.textContent = Date.now() - lastTimestamp;
+  }
+}, 500);
+
+// Check relay health every 5s
+setInterval(async () => {
+  try {
+    const res = await fetch("/health");
+    const json = await res.json();
+    clientsEl.textContent = json.clients;
+    healthEl.textContent = json.ok ? "OK" : "NOT OK";
+  } catch {
+    healthEl.textContent = "ERROR";
+    healthEl.className = "red";
+  }
+}, 5000);
+
+</script>
+</body>
+</html>
