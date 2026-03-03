@@ -10,9 +10,6 @@ app.use(express.json({ limit: "1mb" }));
 // Cloud Run provides PORT
 const port = Number(process.env.PORT || 8080);
 
-// Optional shared secret. If set, /ingest requires matching x-token.
-const cloudToken = process.env.CLOUD_TOKEN || "";
-
 // SSE keepalive ping interval (prevents some proxies from closing idle streams)
 const keepAliveMs = 15000;
 
@@ -42,9 +39,6 @@ app.get("/health", (_, res) => {
 ============================================ */
 
 app.post("/ingest", (req, res) => {
-  if (cloudToken && req.get("x-token") !== cloudToken) {
-    return res.sendStatus(401);
-  }
 
   lastSample = req.body;
 
